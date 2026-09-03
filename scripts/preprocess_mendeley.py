@@ -60,10 +60,16 @@ def save_tiles(img, directory, stem, size, overlap):
     return count
 
 
-def process(path, out_root, tile_size, overlap, resize_size=None, do_crop=False):
+def process(path, out_root, tile_size, overlap, resize_size=None, do_crop=False, flat=False):
     img = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if img is None: raise RuntimeError(f"cannot read {path}")
-    d = out_root / path.stem
+    if flat:
+        original_dir, processed_dir = out_root / 'original', out_root / 'processed'
+        original_dir.mkdir(parents=True, exist_ok=True); processed_dir.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(original_dir / path.name), img)
+        d = out_root / 'stages' / path.stem
+    else:
+        d = out_root / path.stem
     d.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(d/'00_original.jpg'), img)
     # Default keeps the complete original image.  Cropping is opt-in because
@@ -82,6 +88,8 @@ def process(path, out_root, tile_size, overlap, resize_size=None, do_crop=False)
     morph = cv2.morphologyEx(morph, cv2.MORPH_CLOSE, np.ones((3,3), np.uint8))
     cv2.imwrite(str(d/'06_morphology.png'), morph)
     cv2.imwrite(str(d/'07_final.png'), final)
+    if flat:
+        cv2.imwrite(str(out_root / 'processed' / f'{path.stem}.png'), final)
     n = save_tiles(final, d/'tiles', path.stem, tile_size, overlap)
     return {'image': str(path), 'output': str(d), 'original_size': list(img.shape[:2][::-1]), 'processed_size': list(crop.shape[:2][::-1]), 'tiles': n}
 
@@ -94,11 +102,12 @@ def main():
     ap.add_argument('--tile-size', type=int, default=640); ap.add_argument('--overlap', type=int, default=64)
     ap.add_argument('--resize-size', type=int, default=None, help='resize complete image to NxN, e.g. 640; no random crop')
     ap.add_argument('--crop-board', action='store_true', help='opt in to largest-foreground crop')
+    ap.add_argument('--flat', action='store_true', help='also save original/ and processed/ with one matching file per image')
     args = ap.parse_args(); files = sorted(args.input_dir.glob('*.jpg'))
     if args.limit > 0: files = files[:args.limit]
-    rows = [process(p, args.output_dir, args.tile_size, args.overlap, args.resize_size, args.crop_board) for p in files]
+    rows = [process(p, args.output_dir, args.tile_size, args.overlap, args.resize_size, args.crop_board, args.flat) for p in files]
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    (args.output_dir/'preprocess_report.json').write_text(json.dumps({'count':len(rows), 'tile_size':args.tile_size, 'overlap':args.overlap, 'resize_size':args.resize_size, 'crop_board':args.crop_board, 'items':rows}, ensure_ascii=False, indent=2), encoding='utf-8')
+    (args.output_dir/'preprocess_report.json').write_text(json.dumps({'count':len(rows), 'tile_size':args.tile_size, 'overlap':args.overlap, 'resize_size':args.resize_size, 'crop_board':args.crop_board, 'flat':args.flat, 'items':rows}, ensure_ascii=False, indent=2), encoding='utf-8')
     print(json.dumps({'count':len(rows), 'output_dir':str(args.output_dir), 'items':rows}, ensure_ascii=False, indent=2))
 
 if __name__ == '__main__': main()
