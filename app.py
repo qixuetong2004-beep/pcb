@@ -12,6 +12,7 @@ import numpy as np
 from peft import PeftModel
 from PIL import Image, ImageDraw, ImageFont
 from transformers import AutoModelForCausalLM, AutoProcessor
+from src.report_generator import generate_report
 
 MODEL_ID = "microsoft/Florence-2-base-ft"
 ADAPTER = Path("outputs/full_training/best_adapter")
@@ -75,7 +76,10 @@ def detect(image, max_tokens):
     raw = processor.batch_decode(output.sequences, skip_special_tokens=False)[0]
     try:
         parsed = processor.post_process_generation(raw, task=prompt, image_size=processed.size)[prompt]
-        confidence = float(output.sequences_scores[0]) if output.sequences_scores is not None else None
+        raw_score = float(output.sequences_scores[0]) if output.sequences_scores is not None else 0.0
+        # Florence-2 exposes a sequence score rather than calibrated box scores;
+        # sigmoid maps it to a readable confidence proxy for conservative reporting.
+        confidence = 1.0 / (1.0 + np.exp(-raw_score))
         predictions = [{"label": label, "bbox": [round(v) for v in box], "confidence": confidence} for label, box in zip(parsed.get("labels", []), parsed.get("bboxes", [])) if label in CHINESE]
     except Exception:
         predictions = []
@@ -83,8 +87,9 @@ def detect(image, max_tokens):
     for p in predictions:
         drawing.rectangle(p["bbox"], outline=COLORS[p["label"]], width=3)
         drawing.text((p["bbox"][0], max(0, p["bbox"][1] - 22)), CHINESE[p["label"]], font=FONT, fill=COLORS[p["label"]])
-    rows = [[CHINESE[p["label"]], *p["bbox"], region(p["bbox"], processed.size)] for p in predictions]
-    payload = {"task_prompt": prompt, "preprocessing": "resize 640x640 + grayscale + CLAHE + Otsu + morphology", "raw_vlm_sequence": raw, "detections": predictions, "chinese_report": report(predictions, processed.size), "report_note": "中文报告由检测结果按规则生成，不代表模型从 DeepPCB 学到维修知识。"}
+    chinese_report, report_items, report_meta = generate_report(predictions, processed.size)
+    rows = [[CHINESE[p["label"]], *p["bbox"], region(p["bbox"], processed.size), round(p["confidence"], 3)] for p in predictions]
+    payload = {"task_prompt": prompt, "preprocessing": "resize 640x640 + grayscale + CLAHE + Otsu + morphology", "raw_vlm_sequence": raw, "detections": predictions, "standardized_report": report_items, "report_meta": report_meta, "chinese_report": chinese_report, "report_note": "置信度为Florence-2生成序列分数映射得到的参考值，不等同于校准后的目标级概率；报告由检测结果按规则生成。"}
     path = Path(tempfile.mkdtemp()) / "pcb_detection.json"; path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     # Gradio 5 validates File output as a string, not pathlib.Path.
     return processed, canvas, prompt, raw, rows, payload["chinese_report"], stages, str(path)
@@ -100,7 +105,7 @@ with gr.Blocks(title="Florence-2 PCB 缺陷检测") as demo:
     button = gr.Button("开始 Florence-2 检测", variant="primary")
     prompt = gr.Textbox(label="任务提示词")
     raw = gr.Textbox(label="Florence-2 原始生成序列（VLM 输出）", lines=4)
-    table = gr.Dataframe(headers=["类别", "x1", "y1", "x2", "y2", "位置"], label="解析后的结构化检测结果")
+    table = gr.Dataframe(headers=["类别", "x1", "y1", "x2", "y2", "位置", "置信度"], label="解析后的结构化检测结果")
     chinese_report = gr.Textbox(label="中文检测报告（规则生成）", lines=4)
     gr.Markdown("### OpenCV 预处理各阶段")
     stages_gallery = gr.Gallery(label="原图 → 灰度 → 去噪 → 增强 → 二值化 → 形态学 → 模型输入", columns=4, rows=2, height="auto", object_fit="contain")
