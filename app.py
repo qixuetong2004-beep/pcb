@@ -7,6 +7,8 @@ from pathlib import Path
 
 import gradio as gr
 import torch
+import cv2
+import numpy as np
 from peft import PeftModel
 from PIL import Image, ImageDraw, ImageFont
 from transformers import AutoModelForCausalLM, AutoProcessor
@@ -40,35 +42,55 @@ def report(predictions, size):
     details = "；".join(f"{CHINESE[p['label']]}位于{region(p['bbox'], size)}" for p in predictions)
     return f"检测到 {len(predictions)} 处 PCB 缺陷：{summary}。{details}。"
 
+def preprocess_for_vlm(image):
+    """Keep the complete upload, resize to 640 square, and make black-line/white-background image."""
+    arr = cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2BGR)
+    arr = cv2.resize(arr, (640, 640), interpolation=cv2.INTER_AREA)
+    gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+    gray = cv2.GaussianBlur(gray, (3, 3), 0)
+    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
+    threshold, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    out = np.where(gray < threshold, 0, 255).astype(np.uint8)
+    border = np.concatenate([out[0], out[-1], out[:, 0], out[:, -1]])
+    if float((border == 0).mean()) > 0.5:
+        out = 255 - out
+    kernel = np.ones((3, 3), np.uint8)
+    out = cv2.morphologyEx(out, cv2.MORPH_OPEN, kernel)
+    out = cv2.morphologyEx(out, cv2.MORPH_CLOSE, kernel)
+    return Image.fromarray(out).convert("RGB")
+
 def detect(image, max_tokens):
     if image is None: raise gr.Error("请先上传一张 PCB 图片")
     load_model(); image = image.convert("RGB")
+    processed = preprocess_for_vlm(image)
     prompt = "<OD>"
-    inputs = processor(text=prompt, images=image, return_tensors="pt").to(DEVICE, DTYPE)
+    inputs = processor(text=prompt, images=processed, return_tensors="pt").to(DEVICE, DTYPE)
     with torch.inference_mode():
         output = model.generate(input_ids=inputs["input_ids"], pixel_values=inputs["pixel_values"], max_new_tokens=int(max_tokens), num_beams=3, do_sample=False, return_dict_in_generate=True, output_scores=True)
     raw = processor.batch_decode(output.sequences, skip_special_tokens=False)[0]
     try:
-        parsed = processor.post_process_generation(raw, task=prompt, image_size=image.size)[prompt]
+        parsed = processor.post_process_generation(raw, task=prompt, image_size=processed.size)[prompt]
         confidence = float(output.sequences_scores[0]) if output.sequences_scores is not None else None
         predictions = [{"label": label, "bbox": [round(v) for v in box], "confidence": confidence} for label, box in zip(parsed.get("labels", []), parsed.get("bboxes", [])) if label in CHINESE]
     except Exception:
         predictions = []
-    canvas = image.copy(); drawing = ImageDraw.Draw(canvas)
+    canvas = processed.copy(); drawing = ImageDraw.Draw(canvas)
     for p in predictions:
         drawing.rectangle(p["bbox"], outline=COLORS[p["label"]], width=3)
         drawing.text((p["bbox"][0], max(0, p["bbox"][1] - 22)), CHINESE[p["label"]], font=FONT, fill=COLORS[p["label"]])
-    rows = [[CHINESE[p["label"]], *p["bbox"], region(p["bbox"], image.size)] for p in predictions]
-    payload = {"task_prompt": prompt, "raw_vlm_sequence": raw, "detections": predictions, "chinese_report": report(predictions, image.size), "report_note": "中文报告由检测结果按规则生成，不代表模型从 DeepPCB 学到维修知识。"}
+    rows = [[CHINESE[p["label"]], *p["bbox"], region(p["bbox"], processed.size)] for p in predictions]
+    payload = {"task_prompt": prompt, "preprocessing": "resize 640x640 + grayscale + CLAHE + Otsu + morphology", "raw_vlm_sequence": raw, "detections": predictions, "chinese_report": report(predictions, processed.size), "report_note": "中文报告由检测结果按规则生成，不代表模型从 DeepPCB 学到维修知识。"}
     path = Path(tempfile.mkdtemp()) / "pcb_detection.json"; path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     # Gradio 5 validates File output as a string, not pathlib.Path.
-    return canvas, prompt, raw, rows, payload["chinese_report"], str(path)
+    return processed, canvas, prompt, raw, rows, payload["chinese_report"], str(path)
 
 with gr.Blocks(title="Florence-2 PCB 缺陷检测") as demo:
     gr.Markdown("# Florence-2 PCB 缺陷检测与智能描述\n模型生成位置 token 文本，再解析为边界框；下方保留原始 VLM 输出以便演示。")
     with gr.Row():
         image = gr.Image(type="pil", label="上传 PCB 图片")
-        result = gr.Image(label="检测可视化（中文标签）")
+        with gr.Column():
+            processed_result = gr.Image(label="OpenCV 预处理结果（模型输入）")
+            result = gr.Image(label="Florence-2 检测可视化（中文标签）")
     tokens = gr.Slider(64, 512, value=512, step=32, label="最大生成 token 数")
     button = gr.Button("开始 Florence-2 检测", variant="primary")
     prompt = gr.Textbox(label="任务提示词")
@@ -76,7 +98,7 @@ with gr.Blocks(title="Florence-2 PCB 缺陷检测") as demo:
     table = gr.Dataframe(headers=["类别", "x1", "y1", "x2", "y2", "位置"], label="解析后的结构化检测结果")
     chinese_report = gr.Textbox(label="中文检测报告（规则生成）", lines=4)
     download = gr.File(label="下载 JSON 结果")
-    button.click(detect, [image, tokens], [result, prompt, raw, table, chinese_report, download])
+    button.click(detect, [image, tokens], [processed_result, result, prompt, raw, table, chinese_report, download])
 
 if __name__ == "__main__":
     demo.launch(server_name="127.0.0.1", server_port=7860)
