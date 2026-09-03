@@ -92,7 +92,9 @@ def detect(image, max_tokens):
     payload = {"task_prompt": prompt, "preprocessing": "resize 640x640 + grayscale + CLAHE + Otsu + morphology", "raw_vlm_sequence": raw, "detections": predictions, "standardized_report": report_items, "report_meta": report_meta, "chinese_report": chinese_report, "report_note": "置信度为Florence-2生成序列分数映射得到的参考值，不等同于校准后的目标级概率；报告由检测结果按规则生成。"}
     path = Path(tempfile.mkdtemp()) / "pcb_detection.json"; path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     # Gradio 5 validates File output as a string, not pathlib.Path.
-    return processed, canvas, prompt, raw, rows, payload["chinese_report"], stages, str(path)
+    # Gradio Gallery accepts (image, caption) pairs, so every stage is labeled.
+    labeled_stages = list(zip(stages, stage_names))
+    return processed, canvas, prompt, raw, rows, payload["chinese_report"], labeled_stages, str(path)
 
 UI_CSS = """
 .gradio-container { font-size: 17px !important; }
