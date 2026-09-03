@@ -26,7 +26,7 @@ def _region(box, size):
     x = ((box[0] + box[2]) / 2) / size[0]; y = ((box[1] + box[3]) / 2) / size[1]
     return ("左" if x < 1/3 else "右" if x > 2/3 else "中") + ("上" if y < 1/3 else "下" if y > 2/3 else "中") + "区域"
 
-def generate_report(predictions, size, display_threshold=0.40, report_threshold=0.60):
+def generate_report(predictions, size, display_threshold=0.0, report_threshold=0.0):
     normalized = []
     for i, p in enumerate(predictions, 1):
         label = str(p.get("label", "")).lower(); info = LABELS.get(label)
