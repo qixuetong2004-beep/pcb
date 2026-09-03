@@ -46,23 +46,28 @@ def preprocess_for_vlm(image):
     """Keep the complete upload, resize to 640 square, and make black-line/white-background image."""
     arr = cv2.cvtColor(np.asarray(image.convert("RGB")), cv2.COLOR_RGB2BGR)
     arr = cv2.resize(arr, (640, 640), interpolation=cv2.INTER_AREA)
-    gray = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
-    gray = cv2.GaussianBlur(gray, (3, 3), 0)
-    gray = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(gray)
-    threshold, _ = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    out = np.where(gray < threshold, 0, 255).astype(np.uint8)
+    gray0 = cv2.cvtColor(arr, cv2.COLOR_BGR2GRAY)
+    denoise = cv2.GaussianBlur(gray0, (3, 3), 0)
+    contrast = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(denoise)
+    threshold, thresh = cv2.threshold(contrast, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    out = np.where(contrast < threshold, 0, 255).astype(np.uint8)
     border = np.concatenate([out[0], out[-1], out[:, 0], out[:, -1]])
     if float((border == 0).mean()) > 0.5:
         out = 255 - out
     kernel = np.ones((3, 3), np.uint8)
-    out = cv2.morphologyEx(out, cv2.MORPH_OPEN, kernel)
-    out = cv2.morphologyEx(out, cv2.MORPH_CLOSE, kernel)
-    return Image.fromarray(out).convert("RGB")
+    morph = cv2.morphologyEx(out, cv2.MORPH_OPEN, kernel)
+    morph = cv2.morphologyEx(morph, cv2.MORPH_CLOSE, kernel)
+    stages = [
+        ("原图（缩放）", cv2.cvtColor(arr, cv2.COLOR_BGR2RGB)),
+        ("灰度化", gray0), ("去噪", denoise), ("对比度增强", contrast),
+        ("Otsu二值化", thresh), ("形态学处理", morph), ("最终模型输入", morph)
+    ]
+    return Image.fromarray(morph).convert("RGB"), [Image.fromarray(x).convert("RGB") for _, x in stages], [n for n, _ in stages]
 
 def detect(image, max_tokens):
     if image is None: raise gr.Error("请先上传一张 PCB 图片")
     load_model(); image = image.convert("RGB")
-    processed = preprocess_for_vlm(image)
+    processed, stages, stage_names = preprocess_for_vlm(image)
     prompt = "<OD>"
     inputs = processor(text=prompt, images=processed, return_tensors="pt").to(DEVICE, DTYPE)
     with torch.inference_mode():
@@ -82,7 +87,7 @@ def detect(image, max_tokens):
     payload = {"task_prompt": prompt, "preprocessing": "resize 640x640 + grayscale + CLAHE + Otsu + morphology", "raw_vlm_sequence": raw, "detections": predictions, "chinese_report": report(predictions, processed.size), "report_note": "中文报告由检测结果按规则生成，不代表模型从 DeepPCB 学到维修知识。"}
     path = Path(tempfile.mkdtemp()) / "pcb_detection.json"; path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     # Gradio 5 validates File output as a string, not pathlib.Path.
-    return processed, canvas, prompt, raw, rows, payload["chinese_report"], str(path)
+    return processed, canvas, prompt, raw, rows, payload["chinese_report"], stages, str(path)
 
 with gr.Blocks(title="Florence-2 PCB 缺陷检测") as demo:
     gr.Markdown("# Florence-2 PCB 缺陷检测与智能描述\n模型生成位置 token 文本，再解析为边界框；下方保留原始 VLM 输出以便演示。")
@@ -97,8 +102,10 @@ with gr.Blocks(title="Florence-2 PCB 缺陷检测") as demo:
     raw = gr.Textbox(label="Florence-2 原始生成序列（VLM 输出）", lines=4)
     table = gr.Dataframe(headers=["类别", "x1", "y1", "x2", "y2", "位置"], label="解析后的结构化检测结果")
     chinese_report = gr.Textbox(label="中文检测报告（规则生成）", lines=4)
+    gr.Markdown("### OpenCV 预处理各阶段")
+    stages_gallery = gr.Gallery(label="原图 → 灰度 → 去噪 → 增强 → 二值化 → 形态学 → 模型输入", columns=4, rows=2, height="auto", object_fit="contain")
     download = gr.File(label="下载 JSON 结果")
-    button.click(detect, [image, tokens], [processed_result, result, prompt, raw, table, chinese_report, download])
+    button.click(detect, [image, tokens], [processed_result, result, prompt, raw, table, chinese_report, stages_gallery, download])
 
 if __name__ == "__main__":
     demo.launch(server_name="127.0.0.1", server_port=7860)
