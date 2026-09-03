@@ -20,6 +20,14 @@ python app.py
 
 ## 项目内容
 
+项目根目录提供了便于查看的分类入口（使用符号链接指向实际目录，不会重复占用磁盘）：
+
+- `weights/`：最佳 adapter、最后一轮 adapter 和 checkpoints。
+- `datasets/`：DeepPCB、Mendeley 处理图像和 Florence-2 JSONL 记录。
+- `training_results/`：完整训练输出和训练配置。
+- `scripts/`、`src/`：数据检查、预处理、训练、评估和报告代码。
+- `assets/`：界面资源图片。
+
 - `data/raw/DeepPCB/`：DeepPCB 原始仓库的数据工作树（不包含上游 Git 历史）。
 - `data/processed/`：Florence-2 `<OD>` JSONL 转换结果。
 - `data/splits/`：固定随机种子 42 的 900/100/500 训练、验证、测试划分。

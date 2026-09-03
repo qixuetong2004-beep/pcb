@@ -15,7 +15,7 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 from src.report_generator import generate_report
 
 MODEL_ID = "microsoft/Florence-2-base-ft"
-ADAPTER = Path("outputs/full_training/best_adapter")
+ADAPTER = Path("weights/best_adapter")
 DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16 if DEVICE.startswith("cuda") else torch.float32
 CHINESE = {"open": "断路", "short": "短路", "mousebite": "鼠咬", "spur": "毛刺", "copper": "多余铜", "pin-hole": "针孔"}
