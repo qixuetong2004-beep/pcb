@@ -102,7 +102,13 @@ textarea, input { font-size: 17px !important; }
 table { font-size: 16px !important; }
 """
 with gr.Blocks(title="Florence-2 PCB 缺陷检测", css=UI_CSS) as demo:
-    gr.Markdown("# Florence-2 PCB 缺陷检测与智能描述\n模型生成位置 token 文本，再解析为边界框；下方保留原始 VLM 输出以便演示。")
+    gr.Markdown("""
+<div style="text-align:center;">
+  <div style="font-size:32px;font-weight:700;">Florence-2 PCB 缺陷检测与智能描述</div>
+  <div style="font-size:20px;margin-top:10px;">作者：祁雪桐　　学号：23200202</div>
+  <div style="font-size:16px;margin-top:10px;color:#666;">模型生成位置 token 文本，再解析为边界框；下方保留原始 VLM 输出以便演示。</div>
+</div>
+""")
     with gr.Row():
         image = gr.Image(type="pil", label="上传 PCB 图片")
         with gr.Column():
