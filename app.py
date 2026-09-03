@@ -123,6 +123,16 @@ with gr.Blocks(title="Florence-2 PCB 缺陷检测", css=UI_CSS) as demo:
     gr.Markdown("### OpenCV 预处理各阶段")
     stages_gallery = gr.Gallery(label="原图 → 灰度 → 去噪 → 增强 → 二值化 → 形态学 → 模型输入", columns=4, rows=2, height="auto", object_fit="contain")
     download = gr.File(label="下载 JSON 结果")
+    gr.Markdown("""
+### 项目说明
+
+本系统面向 PCB 图像缺陷检测，使用 OpenCV 对上传的彩色 PCB 图像进行缩放、灰度化、去噪、对比度增强、自动二值化和形态学处理，再将处理结果输入微调后的 Florence-2 模型。系统输出缺陷类别、边界框坐标、参考置信度、数量统计和中文检测报告。检测结果仅用于辅助分析，不能替代人工目视检查和电气测试。
+
+作者：祁雪桐　　学号：23200202
+""")
+    gr.Markdown("### 项目彩蛋")
+    easter_egg = Path("assets/project_easter_egg.png")
+    gr.Image(value=str(easter_egg) if easter_egg.exists() else None, label="训练过程记录（非检测功能）", show_download_button=False, height=360)
     button.click(detect, [image, tokens], [processed_result, result, prompt, raw, table, chinese_report, stages_gallery, download])
 
 if __name__ == "__main__":
