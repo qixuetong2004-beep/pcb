@@ -109,6 +109,15 @@ with gr.Blocks(title="Florence-2 PCB 缺陷检测", css=UI_CSS) as demo:
   <div style="font-size:16px;margin-top:10px;color:#666;">模型生成位置 token 文本，再解析为边界框；下方保留原始 VLM 输出以便演示。</div>
 </div>
 """)
+    gr.Markdown("""
+<div style="font-size:19px;line-height:1.8;padding:12px 18px;background:#f7f8fa;border-radius:8px;">
+<b>项目说明</b><br>
+本系统面向 PCB（印制电路板）图像缺陷检测与智能描述。用户上传原始彩色 PCB 图片后，系统首先使用 OpenCV 完成统一缩放、灰度化、高斯去噪、CLAHE 对比度增强、Otsu 自动二值化和轻度形态学处理，将图像转换为黑色线路、白色背景的模型输入图。<br>
+随后，微调后的 Florence-2 视觉语言模型根据 <code>&lt;OD&gt;</code> 任务提示生成缺陷类别与位置 token 文本，程序再将 token 解析为边界框坐标，并输出缺陷类别、数量、位置、参考置信度和可视化结果。系统同时展示每一个 OpenCV 预处理阶段，便于观察图像变化和验证线路是否丢失。<br>
+中文检测报告根据模型实际解析结果自动生成，用于辅助分析和课程项目演示，不能替代人工目视检查、显微检查或电气性能测试。<br>
+作者：祁雪桐　　学号：23200202
+</div>
+""")
     with gr.Row():
         image = gr.Image(type="pil", label="上传 PCB 图片")
         with gr.Column():
@@ -123,16 +132,8 @@ with gr.Blocks(title="Florence-2 PCB 缺陷检测", css=UI_CSS) as demo:
     gr.Markdown("### OpenCV 预处理各阶段")
     stages_gallery = gr.Gallery(label="原图 → 灰度 → 去噪 → 增强 → 二值化 → 形态学 → 模型输入", columns=4, rows=2, height="auto", object_fit="contain")
     download = gr.File(label="下载 JSON 结果")
-    gr.Markdown("""
-### 项目说明
-
-本系统面向 PCB 图像缺陷检测，使用 OpenCV 对上传的彩色 PCB 图像进行缩放、灰度化、去噪、对比度增强、自动二值化和形态学处理，再将处理结果输入微调后的 Florence-2 模型。系统输出缺陷类别、边界框坐标、参考置信度、数量统计和中文检测报告。检测结果仅用于辅助分析，不能替代人工目视检查和电气测试。
-
-作者：祁雪桐　　学号：23200202
-""")
-    gr.Markdown("### 项目彩蛋")
     easter_egg = Path("assets/project_easter_egg.png")
-    gr.Image(value=str(easter_egg) if easter_egg.exists() else None, label="训练过程记录（非检测功能）", show_download_button=False, height=360)
+    gr.Image(value=str(easter_egg) if easter_egg.exists() else None, label="", show_label=False, show_download_button=False, height=360)
     button.click(detect, [image, tokens], [processed_result, result, prompt, raw, table, chinese_report, stages_gallery, download])
 
 if __name__ == "__main__":
