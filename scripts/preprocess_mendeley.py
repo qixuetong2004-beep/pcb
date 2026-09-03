@@ -60,13 +60,18 @@ def save_tiles(img, directory, stem, size, overlap):
     return count
 
 
-def process(path, out_root, tile_size, overlap):
+def process(path, out_root, tile_size, overlap, resize_size=None, do_crop=False):
     img = cv2.imread(str(path), cv2.IMREAD_COLOR)
     if img is None: raise RuntimeError(f"cannot read {path}")
     d = out_root / path.stem
     d.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(d/'00_original.jpg'), img)
-    crop = crop_board(img); cv2.imwrite(str(d/'01_crop.jpg'), crop)
+    # Default keeps the complete original image.  Cropping is opt-in because
+    # automatic foreground crops can remove useful edge defects.
+    crop = crop_board(img) if do_crop else img
+    if resize_size:
+        crop = cv2.resize(crop, (resize_size, resize_size), interpolation=cv2.INTER_AREA)
+    cv2.imwrite(str(d/'01_crop.jpg'), crop)
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY); cv2.imwrite(str(d/'02_gray.png'), gray)
     denoise = cv2.GaussianBlur(gray, (3,3), 0); cv2.imwrite(str(d/'03_denoise.png'), denoise)
     contrast, final = binary_lines(denoise)
@@ -87,11 +92,13 @@ def main():
     ap.add_argument('--output-dir', type=Path, default=Path('outputs/preprocess_smoke'))
     ap.add_argument('--limit', type=int, default=3, help='0 processes all images')
     ap.add_argument('--tile-size', type=int, default=640); ap.add_argument('--overlap', type=int, default=64)
+    ap.add_argument('--resize-size', type=int, default=None, help='resize complete image to NxN, e.g. 640; no random crop')
+    ap.add_argument('--crop-board', action='store_true', help='opt in to largest-foreground crop')
     args = ap.parse_args(); files = sorted(args.input_dir.glob('*.jpg'))
     if args.limit > 0: files = files[:args.limit]
-    rows = [process(p, args.output_dir, args.tile_size, args.overlap) for p in files]
+    rows = [process(p, args.output_dir, args.tile_size, args.overlap, args.resize_size, args.crop_board) for p in files]
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    (args.output_dir/'preprocess_report.json').write_text(json.dumps({'count':len(rows), 'tile_size':args.tile_size, 'overlap':args.overlap, 'items':rows}, ensure_ascii=False, indent=2), encoding='utf-8')
+    (args.output_dir/'preprocess_report.json').write_text(json.dumps({'count':len(rows), 'tile_size':args.tile_size, 'overlap':args.overlap, 'resize_size':args.resize_size, 'crop_board':args.crop_board, 'items':rows}, ensure_ascii=False, indent=2), encoding='utf-8')
     print(json.dumps({'count':len(rows), 'output_dir':str(args.output_dir), 'items':rows}, ensure_ascii=False, indent=2))
 
 if __name__ == '__main__': main()
