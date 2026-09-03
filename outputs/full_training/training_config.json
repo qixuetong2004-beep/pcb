@@ -1,0 +1,32 @@
+{
+  "model_id": "microsoft/Florence-2-base-ft",
+  "seed": 42,
+  "train_index": "data/processed/train.jsonl",
+  "test_index": "data/processed/test.jsonl",
+  "output_dir": "outputs/full_training",
+  "train_count": 900,
+  "val_count": 100,
+  "batch_size": 1,
+  "gradient_accumulation_steps": 8,
+  "epochs": 15,
+  "learning_rate": 1e-05,
+  "weight_decay": 0.01,
+  "warmup_ratio": 0.0,
+  "num_workers": 2,
+  "mixed_precision": "fp16",
+  "gradient_checkpointing": true,
+  "max_new_tokens": 512,
+  "lora": {
+    "r": 8,
+    "alpha": 16,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ]
+  },
+  "keep_last_checkpoints": 3,
+  "selection_metric": "map_iou_0.33"
+}

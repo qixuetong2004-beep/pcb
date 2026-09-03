@@ -1,0 +1,52 @@
+{
+  "dataset_root": "/home/qiyue/图像处理/DeepPCB/PCBData",
+  "splits": {
+    "trainval": 1000,
+    "test": 500
+  },
+  "split_overlap_images": 0,
+  "referenced": {
+    "images": 1500,
+    "annotations": 1500
+  },
+  "discovered": {
+    "test_jpg_images": 1500,
+    "template_jpg_images": 1501,
+    "annotation_txt": 1500
+  },
+  "unreferenced": {
+    "test_images": [],
+    "template_images": [
+      "group90100/90100/90100034_temp.jpg"
+    ],
+    "annotations": []
+  },
+  "image_sizes": {
+    "640x640": 1500
+  },
+  "class_counts": {
+    "open": 1942,
+    "short": 1506,
+    "mousebite": 1965,
+    "spur": 1625,
+    "copper": 1474,
+    "pin-hole": 1501
+  },
+  "total_boxes": 10013,
+  "issues": {
+    "missing_images": [],
+    "missing_templates": [],
+    "missing_annotations": [],
+    "parse_errors": [],
+    "invalid_boxes": [],
+    "empty_annotations": []
+  },
+  "visualizations": [
+    "/home/qiyue/图像处理/pcb_florence2/outputs/phase1/visualizations/annotation_example_01_12100122_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/outputs/phase1/visualizations/annotation_example_02_20085228_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/outputs/phase1/visualizations/annotation_example_03_20085051_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/outputs/phase1/visualizations/annotation_example_04_00041074_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/outputs/phase1/visualizations/annotation_example_05_00041012_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/outputs/phase1/visualizations/annotation_example_06_13000166_test.jpg"
+  ]
+}

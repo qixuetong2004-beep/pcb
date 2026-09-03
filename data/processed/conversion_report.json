@@ -1,0 +1,55 @@
+{
+  "dataset_root": "/home/qiyue/图像处理/DeepPCB/PCBData",
+  "records": {
+    "train": 1000,
+    "test": 500
+  },
+  "train_test_overlap": 0,
+  "input_images_are_test_images_only": true,
+  "class_counts": {
+    "open": 1942,
+    "short": 1506,
+    "mousebite": 1965,
+    "spur": 1625,
+    "copper": 1474,
+    "pin-hole": 1501
+  },
+  "coordinate_mapping": {
+    "range": [
+      0,
+      999
+    ],
+    "encode": "round(x / dimension * 999), clamped",
+    "decode": "round(token / 999 * dimension), clamped"
+  },
+  "round_trip": {
+    "boxes_checked": 10013,
+    "coordinate_values_checked": 40052,
+    "max_absolute_error_pixels": 0,
+    "mean_absolute_error_pixels": 0.0,
+    "within_one_pixel": true
+  },
+  "visualizations": [
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/01_test_12100122_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/02_train_20085228_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/03_train_20085051_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/04_train_00041074_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/05_train_00041012_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/06_train_13000166_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/07_train_20085285_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/08_train_20085209_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/09_test_12100198_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/10_test_50600077_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/11_train_20085178_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/12_test_90100048_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/13_train_92000075_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/14_train_20085065_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/15_train_20085061_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/16_train_20085191_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/17_train_13000156_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/18_train_13000185_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/19_test_13000198_test.jpg",
+    "/home/qiyue/图像处理/pcb_florence2/data/processed/visualizations/20_test_90100074_test.jpg"
+  ],
+  "excluded_unreferenced_template": "group90100/90100/90100034_temp.jpg"
+}

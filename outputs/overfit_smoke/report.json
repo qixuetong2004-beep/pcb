@@ -1,0 +1,9 @@
+{
+  "samples": 12,
+  "steps": 10,
+  "first_loss": 6.875,
+  "last_loss": 3.810546875,
+  "minimum_loss": 3.216796875,
+  "loss_decreased": true,
+  "seed": 42
+}
