@@ -20,7 +20,7 @@ DEVICE = "cuda:0" if torch.cuda.is_available() else "cpu"
 DTYPE = torch.float16 if DEVICE.startswith("cuda") else torch.float32
 CHINESE = {"open": "断路", "short": "短路", "mousebite": "鼠咬", "spur": "毛刺", "copper": "多余铜", "pin-hole": "针孔"}
 COLORS = {"open": "#ef4444", "short": "#22c55e", "mousebite": "#06b6d4", "spur": "#eab308", "copper": "#d946ef", "pin-hole": "#f97316"}
-FONT = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 18)
+FONT = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", 25)
 processor = model = None
 
 def load_model():
@@ -94,7 +94,12 @@ def detect(image, max_tokens):
     # Gradio 5 validates File output as a string, not pathlib.Path.
     return processed, canvas, prompt, raw, rows, payload["chinese_report"], stages, str(path)
 
-with gr.Blocks(title="Florence-2 PCB 缺陷检测") as demo:
+UI_CSS = """
+.gradio-container { font-size: 17px !important; }
+textarea, input { font-size: 17px !important; }
+table { font-size: 16px !important; }
+"""
+with gr.Blocks(title="Florence-2 PCB 缺陷检测", css=UI_CSS) as demo:
     gr.Markdown("# Florence-2 PCB 缺陷检测与智能描述\n模型生成位置 token 文本，再解析为边界框；下方保留原始 VLM 输出以便演示。")
     with gr.Row():
         image = gr.Image(type="pil", label="上传 PCB 图片")
